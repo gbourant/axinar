@@ -1,0 +1,99 @@
+<html>
+<head>
+    <style>
+        li {
+            list-style-type: none;
+            background-color: lightblue;
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "preact": "https://esm.sh/preact@10.27.2",
+                "preact/": "https://esm.sh/preact@10.27.2/",
+                "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import {render} from 'preact';
+        import {html} from 'htm/preact';
+        import {useEffect, useState} from 'preact/hooks';
+
+        const LOCAL_STORAGE_KEY = 'axinar-items';
+        const DEFAULT_ITEMS = ['item 1', 'item 2', 'item 3', 'item 4'];
+
+        function App() {
+
+            const [items, setItems] = useState(() => {
+                try {
+                    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (raw) return JSON.parse(raw);
+                } catch (_) {
+                }
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_ITEMS));
+                return DEFAULT_ITEMS;
+            });
+
+            useEffect(() => localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items)), [items]);
+
+            const [draggedIdx, setDraggedIdx] = useState(null);
+
+            const reorder = (list, fromIndex, toIndex) => {
+                const copy = Array.from(list);
+                const [moved] = copy.splice(fromIndex, 1);
+                copy.splice(toIndex, 0, moved);
+                return copy;
+            };
+
+            const handleDragStart = (e, index) => {
+                setDraggedIdx(index);
+            };
+
+
+            const handleDragEnd = () => {
+                setDraggedIdx(null);
+            };
+
+            const handleDragOver = (e, index) => {
+                e.preventDefault();
+                // only update if needed
+                if (draggedIdx !== null && draggedIdx !== index) {
+                    setItems(items => reorder(items, draggedIdx, index));
+                    setDraggedIdx(index);
+                }
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setDraggedIdx(null);
+            };
+
+            return html`
+                <ul>
+                    ${items.map((item, index) => html`
+                        <li
+                                key=${item}
+                                draggable
+                                onDragStart=${(e) => handleDragStart(e, index)}
+                                onDragEnd=${handleDragEnd}
+                                onDragOver=${(e) => handleDragOver(e, index)}
+                                onDrop=${handleDrop}
+                                style=${draggedIdx === index
+                                        ? "opacity:0.5;"
+                                        : ""}
+                        >${item}
+                        </li>`)}
+                </ul>
+            `;
+        }
+
+        render(html`<${App}/>`,document.body);
+    </script>
+</head>
+<body></body>
+</html>
